@@ -1,0 +1,73 @@
+﻿@page "/trade"
+@inject IHttpClientFactory httpFactory
+
+
+<h3>가계부</h3>
+
+<EditForm Model="@tradeModel" OnValidSubmit="HandleValidSubmit">
+
+    <InputText @bind-Value="tradeModel.Reason" />
+    <InputText @bind-Value="tradeModel.Detail" />
+    <InputNumber @bind-Value="tradeModel.Value" />
+    <InputDate @bind-Value="tradeModel.Date" />
+
+    <button type="submit">생성</button>
+</EditForm>
+
+
+@if (trades == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>제목</th>
+                <th>상세내역</th>
+                <th>금액</th>
+                <th>시간</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var trade in trades)
+            {
+                <tr>
+                    <td>@trade.Reason</td>
+                    <td>@trade.Detail</td>
+                    <td>@trade.Value</td>
+                    <td>@trade.Date.ToString()</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+
+@code {
+
+    private Trade tradeModel = new Trade();
+
+    private List<Trade> trades;
+    protected override async Task OnInitializedAsync()
+    {
+        var response = await httpFactory.CreateClient().GetStringAsync("https://localhost:44351/api/trades");
+        System.Diagnostics.Debug.WriteLine(response);
+        trades = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Trade>>(response);
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        var client = httpFactory.CreateClient();
+        var stringPayload = Newtonsoft.Json.JsonConvert.SerializeObject(tradeModel);
+
+        // Wrap our JSON inside a StringContent which then can be used by the HttpClient class
+        var httpContent = new StringContent(stringPayload, System.Text.Encoding.UTF8, "application/json");
+        await client.PostAsync("https://localhost:44351/api/trades", httpContent);
+
+        var response = await client.GetStringAsync("https://localhost:44351/api/trades");
+        trades = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Trade>>(response);
+    }
+
+}
